@@ -11,8 +11,7 @@ router.post('/signup', [
     .withMessage("Email must contain @"),
     check('password', 'Please enter the password.').isLength({ min: 6 }),
     check('dob', 'Please enter the date of birth').not().isEmpty(),
-    check('description', 'Please enter the Description').not().isEmpty(),
-    check('address', 'Please enter the address').not().isEmpty(),
+    check('description', 'Please enter the Description').not().isEmpty()
 ],userController.signup);
 router.post('/login', [
     check('email', 'Please enter email').matches(/.+\@.+\..+/)
@@ -21,7 +20,9 @@ router.post('/login', [
 ],userController.login);
 router.get('/profile',middleware.isAuth ,userController.userProfile);
 router.get('/allUser',middleware.isAuth ,userController.getAllUsers);
+router.get('/nearestUsers',middleware.isAuth ,userController.nearestAllUser);
 router.put('/updateUser',middleware.isAuth ,userController.updateUser);
+router.patch('/updateAddress',middleware.isAuth ,userController.addAddress);
 router.put('/follow',middleware.isAuth ,userController.followUser);
 router.put('/unFollow',middleware.isAuth ,userController.unFollowUser);
 

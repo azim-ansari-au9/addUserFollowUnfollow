@@ -18,7 +18,7 @@ module.exports = {
             return res.status(422).json({code:422, message: 'Parameter missing 😩', errors: errors.array() })
             }
         try {
-            let {name, email, password, address,dob,description} = req.body
+            let {name, email, password, address,dob,description,lat,lng} = req.body
             const salt = bcrypt.genSaltSync(10);
             const hash = bcrypt.hashSync(password, salt);
             await User.findOne({email:email},(err,user)=>{
@@ -31,13 +31,12 @@ module.exports = {
                         email: email,
                         password: hash,
                         dob:dob,
-                        address: address,
                         description:description
                     }
                     let user = new User(userObj);
                     user.save((err,result)=>{
                         if(err) {
-                            return res.status(500).json({code:500, message:"Internal server error "})
+                            return res.status(500).json({code:500, message:"Internal server error ",err})
                         } else{
                             return res.status(200).json({code:200, message:"User signup Successfully "})                           
                         }
@@ -79,8 +78,8 @@ module.exports = {
                     if(err){
                         res.status(500).json({code :500,message:"Internal server error"})
                     }
-                    var data = {userData:user,token}
-                    return res.status(200).json({code:200, message:"User Logged in Successfully", data})
+                    
+                    return res.status(200).json({code:200, message:"User Logged in Successfully",userData:user, token})
                 }
             )
             res.cookie('c',token,{expire: new Date()+ 9999});
@@ -96,8 +95,7 @@ module.exports = {
                 if(!user || err){
                     return res.status(400).json({code:400, message:"User not found"})
                 }
-                var userDetails = {userData:user}
-                return res.status(200).json({code:200, message:"User details Here !!", userDetails})
+                return res.status(200).json({code:200, message:"User details Here !!", userData:user})
             })
         } catch (err) {
             res.status(500).json({code:500, message:"Server error "}); 
@@ -116,6 +114,40 @@ module.exports = {
             res.status(500).json({code:500, message:"Server error "});  
         }
     },
+    nearestAllUser : async(req, res)=>{
+        const currentUserId = req.user.id;
+        let latitude = parseInt(req.query.lat);
+        let longitude = parseInt(req.query.lng);
+        var match = {"_id":{"$ne":mongoose.Types.ObjectId(currentUserId)}}
+        let aggr = [
+            {
+                $geoNear:
+                {
+                    near: {
+                        type: "Point", coordinates: [longitude, latitude]
+                    },
+                    distanceField: "distance",
+                    distanceMultiplier: 0.000621371,
+                    spherical: true
+                },
+            },
+            { $match: match},
+            { $project: { _id: 1, userId: "$_id", name: 1, description: 1, email: 1, dob: 1, distance: 1, followers:1, following:1, address:1 } },
+            { $sort: { distance: 1 } }
+        ];
+
+        User.aggregate(aggr).exec((err, data)=>{
+            console.log(data,">>>>>>>")
+            if(err){
+                return res.status(400).json({code:400,message:"Internal server error"})
+            }
+            data.map(function(user){
+                user.distance = parseInt(user.distance)
+            })
+            return res.status(200).json({code :200, message:"successfully fetched nearest user", data})
+        })
+    },
+
     updateUser: async (req, res) => {
         try {
             const userId = req.user.id;
@@ -131,11 +163,8 @@ module.exports = {
                 data.dob = dob;
                 if(description)
                 data.description = description;
-                if(address)
-                data.address = address;
                 data.save((err, result) => {
                     if(err) {
-                        // console.log("object",err )
                         return res.status(400).json({code:400, message:"Internal error 2 "})
                     } else {
                         return res.status(200).json({code:200,message:"Successfully updated user details ", result})
@@ -144,6 +173,28 @@ module.exports = {
             })
         } catch (err) {
             res.status(500).json({code:500, message:"Server error "});  
+        }
+    },
+    addAddress: async(req, res) => {
+        try {
+            const { lat, lng } = req.body;
+            const userData = User.findOne({ _id: req.user.id }, { _id: 1, name: 1, address: 1})
+            userData.exec((err, user) => {
+                if (err || !user) {
+                    return res.status(404).json({code:404, message:"Internal server error"})
+                }
+                user.address = {
+                    type: "Point",
+                    coordinates: [lng, lat]
+                };
+                user.save()
+                    .then(result => {
+                        // var resss = { userData: result }
+                        return res.status(200).json({code:200, message:"User details updated successfully",addressData:result});
+                    })
+            })
+        } catch (err) {
+            res.status(500).json({code:500, message:"Server error ", err});  
         }
     },
 
@@ -176,11 +227,14 @@ module.exports = {
             if(err){
                 return res.status(422).json({code:422, message:"Incorrect following id",err})
             }
-            await User.findByIdAndUpdate(req.user.id,{$pull:{following:req.body.followId}},{new:true}).then(result=>{
-                res.status(200).json({code:200, message:"succesfully unfollowed", result})
-            }).catch(err=>{
-                return res.status(422).json({code:422, message:"internal server error", err});
-            })
+            if(!result){
+                return res.status(404).json({code:404, message:"User Not found"})
+            }
+                await User.findByIdAndUpdate(req.user.id,{$pull:{following:req.body.followId}},{new:true}).then(result=>{
+                    res.status(200).json({code:200, message:"succesfully unfollowed", result})
+                }).catch(err=>{
+                    return res.status(422).json({code:422, message:"internal server error", err});
+                })
             })
             
         } catch (err) {

@@ -1,0 +1,99 @@
+1) User registration -
+  route - '/signup'
+  type - POST
+  body parameters - {
+                    "name": "name of the user",
+                    "email": "email of the user",
+                    password: "password",
+                    "dob": date of birth in (yyyy-mm-dd) format,
+                    "description":"description"
+                    }
+
+2) User Login -
+  route - '/login'
+  type - POST
+  body parameters - {
+                    "email": "email of the registered user",
+                    "password": "password"
+                    }
+
+
+3) Update Profile - (protected route)
+  route - '/updateUser'
+  type - PUT
+  headers -{
+      token: value
+  }
+  body parameters - {
+    "name":"name",
+    "dob":"dob",
+    "description":"description"
+}
+
+
+4) User Profile - (protected route)
+  route - '/profile'
+  type - GET
+  headers -{
+      token: value
+  }
+  body parameters - None
+
+5) User Address Update - (protected route)
+  route - '/updateAddress'
+  type - PATCH
+  headers - {
+      token: value
+  }
+  body parameters - {
+    "lat":"lat",
+    "lng":"lng"
+}
+6) Follow user - (protected route)
+  route - '/follow'
+  type - PUT
+  headers - {
+      token: value
+  }
+  body parameters - {
+    "followId":"userId"
+}
+7) Unfollow User - (protected route)
+  route - '/unFollow'
+  type - PUT
+  headers - {
+      token: value
+  }
+  body parameters - {
+    "followId":"608c228024a87f2ddc4d0ebc"
+    }
+
+8) All User Profile - (protected route)
+  route - '/allUser'
+  type - GET
+  headers - {
+      token: value
+    }
+    body parameters - None
+
+9) All Nearest User Profile - (protected route)
+  route - '/nearestUsers'
+  type - GET
+  headers - {
+      token: value
+    }
+    params - {
+        lat: value
+        lng: value
+    }
+    body parameters - None
+
+
+10) Health -
+    routes - '/health'
+    type - GET
+    body parameters - None
+
+
+
+
